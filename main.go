@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type Mode int
@@ -19,7 +22,7 @@ const (
 
 type Arguments struct {
 	Text       string
-	File       *os.File
+	File       io.Reader
 	LineNumber int
 	Mode       Mode
 }
@@ -38,7 +41,7 @@ func main() {
 	fileName := os.Args[2]
 	lineNumber, err := strconv.Atoi(os.Args[3])
 	if err != nil {
-		fmt.Printf("Line number not valid.\n")
+		fmt.Printf("Invalid line number.\n")
 		os.Exit(1)
 	}
 
@@ -59,11 +62,24 @@ func main() {
 		mode = parsedMode
 	}
 
-	_ = Arguments{
+	args := Arguments{
 		Text:       textToInsert,
 		File:       fileHandler,
 		LineNumber: lineNumber,
 		Mode:       mode,
+	}
+
+	// Make sure to close old file first.
+	tempFile, err := CreateNewTargetFile(fileHandler.Name())
+	if err != nil {
+		fmt.Printf("Could not create temporary file %s\n", tempFile.Name())
+		os.Exit(1)
+	}
+
+	err = UpdateContent(args, tempFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -92,4 +108,73 @@ func ParseMode(mode string) (Mode, error) {
 	}
 
 	return Append, fmt.Errorf("Could not parse mode: %s into supported mode.", mode)
+}
+
+// TODO: Fix trailing \n character. Whenever we execute an action, we append a \n at the end of the file.
+func UpdateContent(args Arguments, target io.Writer) error {
+	bufReader := bufio.NewReader(args.File)
+
+	newLineBytes := []byte("\n")
+	var currentLine int
+	currentLine = 1
+
+	for {
+		line, _, err := bufReader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return err
+		}
+
+		if currentLine == args.LineNumber {
+			if args.Mode == Append {
+				target.Write(line)
+				target.Write(newLineBytes)
+				currentLine++
+
+				target.Write([]byte(args.Text))
+				target.Write(newLineBytes)
+				currentLine++
+
+				continue
+			}
+			if args.Mode == Insert {
+				target.Write([]byte(args.Text))
+				target.Write(newLineBytes)
+				currentLine++
+
+				target.Write(line)
+				target.Write(newLineBytes)
+				currentLine++
+
+				continue
+			}
+
+			if args.Mode == Replace {
+				target.Write([]byte(args.Text))
+				target.Write(newLineBytes)
+				currentLine++
+
+				continue
+			}
+		}
+
+		target.Write(line)
+		target.Write(newLineBytes)
+		currentLine++
+	}
+
+	return nil
+}
+
+func CreateNewTargetFile(baseName string) (*os.File, error) {
+	currentDate := time.Now().Unix()
+	name := baseName + "_" + strconv.Itoa(int(currentDate))
+	return os.CreateTemp("", name)
+}
+
+func RemoveAndReplaceFile(old *os.File, new *os.File) error {
+	return nil
 }
