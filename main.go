@@ -36,10 +36,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Make sure the file does have the required amount of lines to edit. If the user tries to edit the 10th line and there's only 5 present, exit the program.
-	textToInsert := os.Args[1]
-	fileName := os.Args[2]
-	lineNumber, err := strconv.Atoi(os.Args[3])
+	textToInsert := argsWithoutProg[0]
+	fileName := argsWithoutProg[1]
+	lineNumber, err := strconv.Atoi(argsWithoutProg[2])
 	if err != nil {
 		fmt.Printf("Invalid line number.\n")
 		os.Exit(1)
@@ -75,7 +74,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = UpdateContent(args, tempFile)
+	if err = UpdateContent(args, tempFile); err != nil {
+		fmt.Println(err)
+		tempFile.Close()
+		if err = os.Remove(tempFile.Name()); err != nil {
+			fmt.Println(err)
+		}
+		os.Exit(1)
+	}
+
 	if err = tempFile.Close(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -173,6 +180,10 @@ func UpdateContent(args Arguments, target io.Writer) error {
 		target.Write(line)
 		target.Write(newLineBytes)
 		currentLine++
+	}
+
+	if currentLine < args.LineNumber {
+		return fmt.Errorf("Line number %d out of range.", args.LineNumber)
 	}
 
 	return nil
