@@ -53,9 +53,9 @@ func main() {
 
 	mode := Replace
 	if argsLen > 3 {
-		parsedMode, err := ParseMode(argsWithoutProg[4])
+		parsedMode, err := ParseMode(argsWithoutProg[3])
 		if err != nil {
-			fmt.Printf("Invalid mode value: %s.\n", argsWithoutProg[4])
+			fmt.Printf("Invalid mode value: %s.\n", argsWithoutProg[3])
 			os.Exit(1)
 		}
 
@@ -69,7 +69,6 @@ func main() {
 		Mode:       mode,
 	}
 
-	// Make sure to close old file first.
 	tempFile, err := CreateNewTargetFile(fileHandler.Name())
 	if err != nil {
 		fmt.Printf("Could not create temporary file %s\n", tempFile.Name())
@@ -77,7 +76,17 @@ func main() {
 	}
 
 	err = UpdateContent(args, tempFile)
-	if err != nil {
+	if err = tempFile.Close(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err = fileHandler.Close(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err = RemoveAndReplaceFile(fileHandler, tempFile); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -107,7 +116,7 @@ func ParseMode(mode string) (Mode, error) {
 		return Insert, nil
 	}
 
-	return Append, fmt.Errorf("Could not parse mode: %s into supported mode.", mode)
+	return Replace, fmt.Errorf("Could not parse mode: %s into supported mode.", mode)
 }
 
 // TODO: Fix trailing \n character. Whenever we execute an action, we append a \n at the end of the file.
@@ -172,9 +181,21 @@ func UpdateContent(args Arguments, target io.Writer) error {
 func CreateNewTargetFile(baseName string) (*os.File, error) {
 	currentDate := time.Now().Unix()
 	name := baseName + "_" + strconv.Itoa(int(currentDate))
-	return os.CreateTemp("", name)
+	return os.Create(name)
 }
 
 func RemoveAndReplaceFile(old *os.File, new *os.File) error {
+	targetName := old.Name()
+
+	err := os.Remove(old.Name())
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(new.Name(), targetName)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
