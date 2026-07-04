@@ -40,9 +40,9 @@ func TestInsertLine(t *testing.T) {
 		mode           Mode
 		expectedOutput string
 	}{
-		{name: "Appending a line", mode: Append, expectedOutput: "Just a line of text.\nfoo\nLet me know if you wanna edit something,\nBut don't be shy\n"},
-		{name: "Inserting a line", mode: Insert, expectedOutput: "foo\nJust a line of text.\nLet me know if you wanna edit something,\nBut don't be shy\n"},
-		{name: "Replacing a line", mode: Replace, expectedOutput: "foo\nLet me know if you wanna edit something,\nBut don't be shy\n"},
+		{name: "Appending a line", mode: Append, expectedOutput: "Just a line of text.\nfoo\nLet me know if you wanna edit something,\nBut don't be shy"},
+		{name: "Inserting a line", mode: Insert, expectedOutput: "foo\nJust a line of text.\nLet me know if you wanna edit something,\nBut don't be shy"},
+		{name: "Replacing a line", mode: Replace, expectedOutput: "foo\nLet me know if you wanna edit something,\nBut don't be shy"},
 	}
 
 	for _, tt := range tests {

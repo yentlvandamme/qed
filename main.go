@@ -126,7 +126,6 @@ func ParseMode(mode string) (Mode, error) {
 	return Replace, fmt.Errorf("Could not parse mode: %s into supported mode.", mode)
 }
 
-// TODO: Fix trailing \n character. Whenever we execute an action, we append a \n at the end of the file.
 func UpdateContent(args Arguments, target io.Writer) error {
 	bufReader := bufio.NewReader(args.File)
 
@@ -144,6 +143,10 @@ func UpdateContent(args Arguments, target io.Writer) error {
 			return err
 		}
 
+		if currentLine != 1 {
+			target.Write(newLineBytes)
+		}
+
 		if currentLine == args.LineNumber {
 			if args.Mode == Append {
 				target.Write(line)
@@ -151,18 +154,17 @@ func UpdateContent(args Arguments, target io.Writer) error {
 				currentLine++
 
 				target.Write([]byte(args.Text))
-				target.Write(newLineBytes)
 				currentLine++
 
 				continue
 			}
+
 			if args.Mode == Insert {
 				target.Write([]byte(args.Text))
 				target.Write(newLineBytes)
 				currentLine++
 
 				target.Write(line)
-				target.Write(newLineBytes)
 				currentLine++
 
 				continue
@@ -170,7 +172,6 @@ func UpdateContent(args Arguments, target io.Writer) error {
 
 			if args.Mode == Replace {
 				target.Write([]byte(args.Text))
-				target.Write(newLineBytes)
 				currentLine++
 
 				continue
@@ -178,7 +179,6 @@ func UpdateContent(args Arguments, target io.Writer) error {
 		}
 
 		target.Write(line)
-		target.Write(newLineBytes)
 		currentLine++
 	}
 
